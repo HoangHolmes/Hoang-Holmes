@@ -1,0 +1,65 @@
+//@version=5
+indicator("Chạc Đà 2.0", overlay=true)
+
+
+// Inputs
+colornen = input.bool(false, "Màu theo Nến?")
+colorup = input.color(color.aqua, "Đà tăng")
+colordown = input.color(color.orange, "Đà giảm")
+scale = input.string('Normal', 'Chạc đà on Scale?', options=['Normal', 'Log', 'Percent'])
+
+
+// Variables to store the state
+var float o = na
+var float c = na
+var float total = na
+var float dir = na // Changed type of dir to float
+
+
+// Calculations
+float diff = na
+float absdiff = na
+float highestspread = na
+float highestvol = na
+float spreadscore = na
+float volumescore = na
+float diemvol = na
+float diemspread = na
+
+
+// Scale calculation
+if scale == 'Log'
+    diff := math.log(close) - math.log(open)
+else if scale == 'Percent'
+    diff := (close - open) / open
+else
+    diff := close - open
+
+
+absdiff := math.abs(diff)
+highestspread := ta.highest(absdiff, 5)
+highestvol := ta.highest(volume, 5)
+spreadscore := highestspread / 5
+volumescore := highestvol / 5
+diemvol := volume / volumescore
+diemspread := absdiff / spreadscore
+total := diemspread + diemvol
+
+
+// Direction logic
+dir := math.sign(diff) * math.sign(diemspread)
+o := na(dir[1]) ? open : (dir != dir[1] ? close[1] : o[1])
+c := na(dir[1]) ? close : (dir == 1 ? o + total : o - total)
+
+
+// Adjust open and close for plotting candles
+o := na(o) ? close : o
+c := na(c) ? close : c
+
+
+// Determine color of the bar
+color barcolor = colornen ? (close > open ? colorup : colordown) : (dir > 0 ? colorup : colordown)
+
+
+// Plot the custom bars
+plotcandle(o, high, low, c, color=barcolor)
